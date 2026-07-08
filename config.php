@@ -13,9 +13,9 @@ if ($appEnv !== 'development') {
 }
 try {
     $host = '127.0.0.1';
-    // Sur cette machine, MySQL écoute sur 13306 (XAMPP portable ou conflit de port possible).
-    // Vous pouvez définir DB_PORT dans l'environnement si vous préférez un autre port.
-    $port = getenv('DB_PORT') ?: '13306';
+    // Par défaut MySQL utilise le port 3306. Si votre instance utilise un autre port,
+    // définissez la variable d'environnement DB_PORT.
+    $port = getenv('DB_PORT') ?: '3306';
     $db   = 'akd_db';
     $user = 'root';
     $pass = getenv('DB_PASS') ?: ''; // Mets ton mot de passe si tu en as un sur XAMPP/Laragon (ou définir DB_PASS dans l'environnement)
