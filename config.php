@@ -1,21 +1,57 @@
 <?php
+declare(strict_types=1);
+// Environnement: définir APP_ENV=development pour afficher les erreurs en dev
+$appEnv = getenv('APP_ENV') ?: 'production';
+if ($appEnv !== 'development') {
+    ini_set('display_errors', '0');
+    ini_set('display_startup_errors', '0');
+    error_reporting(0);
+} else {
+    ini_set('display_errors', '1');
+    ini_set('display_startup_errors', '1');
+    error_reporting(E_ALL);
+}
 try {
     $host = '127.0.0.1';
+    // Sur cette machine, MySQL écoute sur 13306 (XAMPP portable ou conflit de port possible).
+    // Vous pouvez définir DB_PORT dans l'environnement si vous préférez un autre port.
+    $port = getenv('DB_PORT') ?: '13306';
     $db   = 'akd_db';
     $user = 'root';
-    $pass = ''; // Mets ton mot de passe si tu en as un sur XAMPP/Laragon
+    $pass = getenv('DB_PASS') ?: ''; // Mets ton mot de passe si tu en as un sur XAMPP/Laragon (ou définir DB_PASS dans l'environnement)
     $charset = 'utf8mb4';
-
-    $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+    $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
     $options = [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES   => false,
+        PDO::ATTR_TIMEOUT           => 5,
     ];
     
     $pdo = new PDO($dsn, $user, $pass, $options);
 } catch (\PDOException $e) {
-    throw new \PDOException($e->getMessage(), (int)$e->getCode());
+    $hint = 'Vérifiez que le serveur MySQL est démarré (XAMPP Control Panel), que l\'hôte, le port et les identifiants sont corrects.';
+    // Log détaillé côté serveur
+    error_log('DB connection error: ' . $e->getMessage());
+
+    if (php_sapi_name() === 'cli') {
+        // Pour les développeurs en CLI, afficher le détail
+        fwrite(STDERR, "Database connection failed: {$e->getMessage()}\n{$hint}\n");
+        exit(1);
+    }
+
+    // Pour le web en production, ne rien divulguer — afficher un message générique
+    if ($appEnv === 'development') {
+        echo '<h2>Erreur de connexion à la base de données</h2>';
+        echo '<p>' . htmlspecialchars($e->getMessage()) . '</p>';
+        echo '<p>' . htmlspecialchars($hint) . '</p>';
+    } else {
+        // Message non détaillé pour les visiteurs
+        http_response_code(500);
+        echo '<h2>Une erreur est survenue</h2>';
+        echo '<p>Veuillez réessayer plus tard.</p>';
+    }
+    exit;
 }
 
 // Tableau global de traductions
@@ -66,4 +102,3 @@ $translations = [
         'footer_description' => 'Xam-xam ci sa loxo.'
     ]
 ];
-?>
